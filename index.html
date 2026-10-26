@@ -1,0 +1,359 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WordSmart</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel compiler -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    .perspective { perspective: 1000px; }
+    .preserve-3d { transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; }
+    .rotate-y-180 { transform: rotateY(180deg); }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    //
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQxaTDNSLII4UmnKgCqZCNVJj0rClHkVo",
+
+      authDomain: "wordsmart-40a2e.firebaseapp.com",
+      projectId: "wordsmart-40a2e",
+      storageBucket: "wordsmart-40a2e.firebasestorage.app",
+      messagingSenderId: "1076933456682",
+      appId: "1:1076933456682:web:096247966873e6e53be453",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+
+    const initialWords = [
+      { word: "Abate", definition: "To reduce in amount, degree, or severity.", roots: "ad- (to) + battere (to beat)", chunk: 1 },
+      { word: "Aberration", definition: "Something that differs from the norm.", roots: "ab- (away) + errare (to wander)", chunk: 1 },
+      { word: "Abhor", definition: "To hate deeply; detest.", roots: "ab- (away) + horrere (to shudder)", chunk: 1 },
+      { word: "Abstruse", definition: "Difficult to comprehend.", roots: "abs- (away) + trudere (to push)", chunk: 1 },
+      { word: "Acumen", definition: "Keen insight.", roots: "acuere (to sharpen)", chunk: 1 },
+      { word: "Alacrity", definition: "Cheerful readiness, promptness in response.", roots: "alacer (lively)", chunk: 1 },
+      { word: "Ameliorate", definition: "To make better or more tolerable.", roots: "melior (better)", chunk: 1 },
+      { word: "Anachronism", definition: "Something out of place in time.", roots: "ana- (backward) + chronos (time)", chunk: 1 },
+      { word: "Anomaly", definition: "Deviation from what is normal.", roots: "an- (not) + homos (same)", chunk: 1 },
+      { word: "Antipathy", definition: "Extreme dislike.", roots: "anti- (against) + pathos (feeling)", chunk: 1 },
+      { word: "Apathy", definition: "Lack of feeling, emotion, or interest.", roots: "a- (without) + pathos (feeling)", chunk: 1 },
+      { word: "Apocryphal", definition: "Of doubtful authenticity.", roots: "apo- (away) + kryptein (to hide)", chunk: 1 },
+      { word: "Arcane", definition: "Known or understood by only a few.", roots: "arcanus (secret)", chunk: 1 },
+      { word: "Ascetic", definition: "Practicing strict self-denial.", roots: "askein (to exercise)", chunk: 1 },
+      { word: "Assuage", definition: "To make something unpleasant less severe.", roots: "ad- (to) + suavis (sweet)", chunk: 1 },
+      { word: "Audacious", definition: "Fearless and daring.", roots: "audere (to dare)", chunk: 1 },
+      { word: "Banal", definition: "Predictable, clichéd, boring.", roots: "ban (proclamation)", chunk: 1 },
+      { word: "Belligerent", definition: "Hostile and aggressive.", roots: "bellum (war) + gerere (to wage)", chunk: 1 },
+      { word: "Benign", definition: "Harmless, gentle.", roots: "bene (well) + gignere (to bear)", chunk: 1 },
+      { word: "Bolster", definition: "To support or prop up.", roots: "Old English (bolster)", chunk: 1 },
+      { word: "Bombastic", definition: "Pompous in speech and manner.", roots: "bombax (cotton)", chunk: 1 },
+      { word: "Cacophony", definition: "Harsh, jarring noise.", roots: "kakos (bad) + phone (sound)", chunk: 1 },
+      { word: "Candid", definition: "Impartial and honest in speech.", roots: "candidus (white)", chunk: 1 },
+      { word: "Capricious", definition: "Changing one's mind quickly and often.", roots: "caput (head) + riccio (hedgehog)", chunk: 1 },
+      { word: "Castigate", definition: "To punish or criticize harshly.", roots: "castus (pure) + agere (to do)", chunk: 1 },
+      { word: "Catalyst", definition: "Something that brings about a change.", roots: "kata- (down) + lyein (to loosen)", chunk: 1 },
+      { word: "Caustic", definition: "Biting in wit.", roots: "kaiein (to burn)", chunk: 1 },
+      { word: "Chicanery", definition: "Deception by means of craft or guile.", roots: "chicaner (to quibble)", chunk: 1 },
+      { word: "Chronicle", definition: "A factual written account.", roots: "chronos (time)", chunk: 1 },
+      { word: "Circumscribe", definition: "To limit or restrict.", roots: "circum (around) + scribere (to write)", chunk: 1 },
+      { word: "Cognitive", definition: "Relating to conscious mental activities.", roots: "co- (together) + gnoscere (to know)", chunk: 1 },
+      { word: "Conciliatory", definition: "Intended or likely to placate or pacify.", roots: "concilium (meeting)", chunk: 1 },
+      { word: "Conundrum", definition: "A puzzle or problem.", roots: "Unknown", chunk: 1 },
+      { word: "Credulous", definition: "Too trusting; gullible.", roots: "credere (to believe)", chunk: 1 },
+      { word: "Culpable", definition: "Deserving blame.", roots: "culpa (blame)", chunk: 1 },
+      { word: "Dearth", definition: "A lack, scarcity.", roots: "Old English (deore)", chunk: 1 },
+      { word: "Deference", definition: "Respect, courtesy.", roots: "de- (down) + ferre (to bear)", chunk: 1 },
+      { word: "Deride", definition: "To speak of or treat with contempt.", roots: "de- (down) + ridere (to laugh)", chunk: 1 },
+      { word: "Desiccate", definition: "To dry out thoroughly.", roots: "de- (thoroughly) + siccare (to dry)", chunk: 1 },
+      { word: "Desultory", definition: "Jumping from one thing to another; disconnected.", roots: "de- (down) + salire (to jump)", chunk: 1 },
+      { word: "Diatribe", definition: "An abusive, condemnatory speech.", roots: "dia- (through) + tribein (to rub)", chunk: 1 },
+      { word: "Diffident", definition: "Lacking self-confidence.", roots: "dis- (away) + fidere (to trust)", chunk: 1 },
+      { word: "Dilatory", definition: "Intended to delay.", roots: "differre (to delay)", chunk: 1 },
+      { word: "Dirge", definition: "A funeral hymn or mournful speech.", roots: "dirige (direct)", chunk: 1 },
+      { word: "Disabuse", definition: "To set right; to free from error.", roots: "dis- (not) + abuti (to misuse)", chunk: 1 },
+      { word: "Discern", definition: "To perceive or recognize.", roots: "dis- (apart) + cernere (to separate)", chunk: 1 },
+      { word: "Disparate", definition: "Fundamentally different; entirely unlike.", roots: "dis- (apart) + parare (to prepare)", chunk: 1 },
+      { word: "Dissemble", definition: "To present a false appearance; to conceal intentions.", roots: "dis- (completely) + simulare (to pretend)", chunk: 1 },
+      { word: "Dissonance", definition: "A harsh and disagreeable combination, often of sounds.", roots: "dis- (apart) + sonare (to sound)", chunk: 1 },
+      { word: "Dogma", definition: "A firmly held opinion, often a religious belief.", roots: "dokein (to seem good)", chunk: 1 },
+      { word: "Dogmatic", definition: "Dictatorial in one's opinions.", roots: "dokein (to seem good)", chunk: 2 },
+      { word: "Dupe", definition: "To deceive; a person who is easily deceived.", roots: "French (duppe)", chunk: 2 },
+      { word: "Eclectic", definition: "Selecting from or made up from a variety of sources.", roots: "ek- (out) + legein (to gather)", chunk: 2 },
+      { word: "Efficacy", definition: "Effectiveness.", roots: "efficere (to accomplish)", chunk: 2 },
+      { word: "Elegy", definition: "A sorrowful poem or speech.", roots: "elegos (mournful poem)", chunk: 2 },
+      { word: "Eloquent", definition: "Persuasive and moving, especially in speech.", roots: "e- (out) + loqui (to speak)", chunk: 2 },
+      { word: "Emulate", definition: "To copy; to try to equal or excel.", roots: "aemulari (to rival)", chunk: 2 },
+      { word: "Enervate", definition: "To reduce in strength.", roots: "e- (out) + nervus (sinew)", chunk: 2 },
+      { word: "Engender", definition: "To produce, cause, or bring about.", roots: "en- (in) + generare (to generate)", chunk: 2 },
+      { word: "Enigma", definition: "A puzzle; a mystery.", roots: "ainissesthai (to speak in riddles)", chunk: 2 },
+      { word: "Ephemeral", definition: "Lasting a short time.", roots: "epi- (on) + hemera (day)", chunk: 2 },
+      { word: "Equivocate", definition: "To use expressions of double meaning in order to mislead.", roots: "aequus (equal) + vocare (to call)", chunk: 2 },
+      { word: "Erudite", definition: "Learned, scholarly, bookish.", roots: "e- (out) + rudis (untrained)", chunk: 2 },
+      { word: "Esoteric", definition: "Known or understood only by a few.", roots: "esotero (inner)", chunk: 2 },
+      { word: "Eulogy", definition: "Speech in praise of someone.", roots: "eu- (good) + logos (word)", chunk: 2 },
+      { word: "Euphemism", definition: "Use of an inoffensive word or phrase in place of a more distasteful one.", roots: "eu- (good) + pheme (speaking)", chunk: 2 },
+      { word: "Exacerbate", definition: "To make worse.", roots: "ex- (out) + acerbus (harsh)", chunk: 2 },
+      { word: "Exculpate", definition: "To clear from blame; prove innocent.", roots: "ex- (out) + culpa (blame)", chunk: 2 },
+      { word: "Exigent", definition: "Urgent; requiring immediate action.", roots: "ex- (out) + agere (to drive)", chunk: 2 },
+      { word: "Exonerate", definition: "To clear of blame.", roots: "ex- (out) + onus (burden)", chunk: 2 },
+      { word: "Explicit", definition: "Clearly stated or shown; forthright in expression.", roots: "ex- (out) + plicare (to fold)", chunk: 2 },
+      { word: "Fanatical", definition: "Acting excessively enthusiastic; filled with extreme, unquestioned devotion.", roots: "fanum (temple)", chunk: 2 },
+      { word: "Fawn", definition: "To grovel.", roots: "Old English (fagnian)", chunk: 2 },
+      { word: "Fervid", definition: "Intensely emotional; feverish.", roots: "fervere (to boil)", chunk: 2 },
+      { word: "Florid", definition: "Excessively decorated or embellished.", roots: "flos (flower)", chunk: 2 },
+      { word: "Foment", definition: "To arouse or incite.", roots: "fovere (to warm)", chunk: 2 },
+      { word: "Garrulous", definition: "Tending to talk a lot.", roots: "garrire (to chatter)", chunk: 2 },
+      { word: "Gregarious", definition: "Outgoing, sociable.", roots: "grex (flock)", chunk: 2 },
+      { word: "Guile", definition: "Deceit or trickery.", roots: "Old French (guile)", chunk: 2 },
+      { word: "Gullible", definition: "Easily deceived.", roots: "gull (to swallow)", chunk: 2 },
+      { word: "Homogenous", definition: "Of a similar kind.", roots: "homos (same) + genos (kind)", chunk: 2 },
+      { word: "Iconoclast", definition: "One who opposes established beliefs, customs, and institutions.", roots: "eikon (image) + klan (to break)", chunk: 2 },
+      { word: "Imperturbable", definition: "Not capable of being disturbed.", roots: "in- (not) + per- (through) + turbare (to disturb)", chunk: 2 },
+      { word: "Impervious", definition: "Impossible to penetrate; incapable of being affected.", roots: "in- (not) + per- (through) + via (road)", chunk: 2 },
+      { word: "Impetuous", definition: "Quick to act without thinking.", roots: "impetere (to attack)", chunk: 2 },
+      { word: "Implacable", definition: "Unable to be calmed down or made peaceful.", roots: "in- (not) + placare (to calm)", chunk: 2 },
+      { word: "Inchoate", definition: "Not fully formed; disorganized.", roots: "in- (in) + cohum (strap)", chunk: 2 },
+      { word: "Ingenuous", definition: "Showing innocence or childlike simplicity.", roots: "in- (in) + gignere (to produce)", chunk: 2 },
+      { word: "Inimical", definition: "Hostile, unfriendly.", roots: "in- (not) + amicus (friend)", chunk: 2 },
+      { word: "Innocuous", definition: "Harmless.", roots: "in- (not) + nocere (to harm)", chunk: 2 },
+      { word: "Insipid", definition: "Lacking interest or flavor.", roots: "in- (not) + sapere (to taste)", chunk: 2 },
+      { word: "Intransigent", definition: "Uncompromising; refusing to be reconciled.", roots: "in- (not) + transigere (to compromise)", chunk: 2 },
+      { word: "Inundate", definition: "To overwhelm; to cover with water.", roots: "in- (in) + unda (wave)", chunk: 2 },
+      { word: "Irascible", definition: "Easily made angry.", roots: "irasci (to grow angry)", chunk: 2 },
+      { word: "Laconic", definition: "Using few words.", roots: "Lakon (Spartan)", chunk: 2 },
+      { word: "Lament", definition: "To express sorrow; to grieve.", roots: "lamentari (to weep)", chunk: 2 },
+      { word: "Laud", definition: "To give praise; to glorify.", roots: "laudare (to praise)", chunk: 2 },
+      { word: "Lavish", definition: "To give unsparingly; extremely generous or extravagant.", roots: "laver (to wash)", chunk: 2 },
+      { word: "Lethargic", definition: "Acting in an indifferent or slow, sluggish manner.", roots: "lethe (forgetfulness)", chunk: 2 },
+      { word: "Loquacious", definition: "Talkative.", roots: "loqui (to speak)", chunk: 2 }
+    ];
+
+    function App() {
+      const [user, setUser] = React.useState(null);
+      const [words, setWords] = React.useState(initialWords);
+      const [currentChunk, setCurrentChunk] = React.useState(1);
+      const [sortMode, setSortMode] = React.useState('alphabetical');
+      const [view, setView] = React.useState('flashcards');
+      const [masteredWords, setMasteredWords] = React.useState({});
+      const [isDarkMode, setIsDarkMode] = React.useState(() => localStorage.getItem('theme') === 'dark');
+
+      React.useEffect(() => {
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+        }
+      }, [isDarkMode]);
+
+      React.useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          setUser(currentUser);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      React.useEffect(() => {
+        if (!user) {
+          setMasteredWords({});
+          return;
+        }
+
+        const progressRef = doc(db, 'users', user.uid, 'progress', 'mastered');
+        const unsubscribe = onSnapshot(progressRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setMasteredWords(docSnap.data().words || {});
+          }
+        }, (error) => {
+          console.error("Error fetching progress:", error);
+        });
+
+        return () => unsubscribe();
+      }, [user]);
+
+      const toggleMastery = async (wordStr) => {
+        if (!user) {
+          alert("Please sign in with Google to sync your progress across devices!");
+          return;
+        }
+
+        const newMasteryState = { ...masteredWords, [wordStr]: !masteredWords[wordStr] };
+        setMasteredWords(newMasteryState);
+
+        const progressRef = doc(db, 'users', user.uid, 'progress', 'mastered');
+        try {
+          await setDoc(progressRef, { words: newMasteryState }, { merge: true });
+        } catch (e) {
+          console.error("Error saving progress:", e);
+          setMasteredWords(masteredWords);
+        }
+      };
+
+      const handleGoogleSignIn = async () => {
+        try {
+          await signInWithPopup(auth, googleProvider);
+        } catch (err) {
+          console.error("Google auth error:", err);
+        }
+      };
+
+      const handleSignOut = async () => {
+        try {
+          await signOut(auth);
+        } catch (err) {
+          console.error("Sign out error:", err);
+        }
+      };
+
+      const availableChunks = React.useMemo(() => {
+        const chunks = new Set(words.map(w => w.chunk || 1));
+        return Array.from(chunks).sort((a, b) => a - b);
+      }, [words]);
+
+      const displayedWords = React.useMemo(() => {
+        let filtered = words.filter(w => (w.chunk || 1) === currentChunk);
+        if (sortMode === 'alphabetical') {
+          filtered.sort((a, b) => a.word.localeCompare(b.word));
+        } else if (sortMode === 'random') {
+          let array = [...filtered];
+          for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+          }
+          filtered = array;
+        }
+        return filtered;
+      }, [words, currentChunk, sortMode]);
+
+      return (
+        <div className="min-h-screen font-sans">
+          <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md">W</div>
+              <h1 className="text-2xl font-bold tracking-tight">WordSmart</h1>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button 
+                onClick={() => setView('flashcards')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${view === 'flashcards' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+              >
+                Flashcards
+              </button>
+
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-yellow-400"
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
+
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">{user.displayName || user.email}</span>
+                  <button onClick={handleSignOut} className="px-3 py-1.5 rounded-lg text-sm bg-red-100 text-red-600 hover:bg-red-200">Sign Out</button>
+                </div>
+              ) : (
+                <button onClick={handleGoogleSignIn} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-sm">
+                  Sign in with Google to Sync
+                </button>
+              )}
+            </div>
+          </nav>
+
+          <main className="max-w-6xl mx-auto p-6">
+            <div className="space-y-6">
+              <div className="p-4 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-gray-800">
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-sm uppercase tracking-wider opacity-70">Select Chunk:</span>
+                  <select 
+                    value={currentChunk} 
+                    onChange={(e) => setCurrentChunk(Number(e.target.value))}
+                    className="p-2 rounded-lg font-medium outline-none bg-gray-100 dark:bg-gray-700 dark:text-white"
+                  >
+                    {availableChunks.map(c => (
+                      <option key={c} value={c}>Chunk {c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                  <button onClick={() => setSortMode('alphabetical')} className={`px-3 py-1.5 rounded-md text-sm font-medium ${sortMode === 'alphabetical' ? 'bg-white dark:bg-gray-600 shadow' : ''}`}>Alphabetical</button>
+                  <button onClick={() => setSortMode('random')} className={`px-3 py-1.5 rounded-md text-sm font-medium ${sortMode === 'random' ? 'bg-white dark:bg-gray-600 shadow' : ''}`}>Random</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedWords.map((item, idx) => (
+                  <Flashcard 
+                    key={`${item.word}-${idx}`} 
+                    data={item} 
+                    isMastered={!!masteredWords[item.word]}
+                    onToggleMastery={() => toggleMastery(item.word)}
+                    isDarkMode={isDarkMode}
+                  />
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    function Flashcard({ data, isMastered, onToggleMastery, isDarkMode }) {
+      const [flipped, setFlipped] = React.useState(false);
+
+      return (
+        <div className="relative group perspective">
+          <div 
+            onClick={() => setFlipped(!flipped)}
+            className={`w-full h-64 rounded-2xl cursor-pointer transition-all duration-500 preserve-3d shadow-md hover:shadow-xl ${flipped ? 'rotate-y-180' : ''}`}
+          >
+            <div className={`absolute inset-0 backface-hidden flex flex-col justify-center items-center p-6 rounded-2xl border-2 ${isMastered ? 'border-green-400 bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800 border-transparent'}`}>
+              <h2 className="text-3xl font-extrabold text-center mb-2">{data.word}</h2>
+              <span className="text-xs uppercase tracking-widest font-semibold opacity-50 mt-4">Tap to flip</span>
+            </div>
+
+            <div className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col p-6 rounded-2xl overflow-y-auto bg-blue-50 dark:bg-gray-700">
+              <h3 className="text-xl font-bold mb-3">{data.word}</h3>
+              <p className="font-medium text-base mb-4">{data.definition}</p>
+              {data.roots && <div className="mt-auto text-xs opacity-80"><strong>Roots:</strong> {data.roots}</div>}
+            </div>
+          </div>
+
+          <div className="mt-3 flex justify-center">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onToggleMastery(); }}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border ${isMastered ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white dark:bg-gray-800 text-gray-600 border-gray-200'}`}
+            >
+              {isMastered ? '✓ Mastered' : 'Mark Mastered'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
